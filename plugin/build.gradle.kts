@@ -36,7 +36,7 @@ dependencies {
 gradlePlugin {
     // Define the plugin
     val mergeOpenApi by plugins.creating {
-        id = "com.github.merge-openApi"
+        id = "io.github.ozonophore.merge-openApi"
         implementationClass = "com.github.mergeOpenApi.MergeOpenapiPlugin"
     }
 }
