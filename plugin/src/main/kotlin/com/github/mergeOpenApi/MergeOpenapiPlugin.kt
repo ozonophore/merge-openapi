@@ -22,6 +22,76 @@ open class MergeOpenapiExtension {
 
 open class MergeOpenapiTask @Inject constructor(@Input val extension: MergeOpenapiExtension): DefaultTask() {
 
+    private val objectMapper = ObjectMapper(YAMLFactory())
+    private val objectMapperJson = ObjectMapper()
+
+    @kotlin.Throws(IOException::class)
+    private open fun readNodes(vararg files: File): JsonNode? {
+        var jsonNode: JsonNode? = null
+        for (file in files) {
+            jsonNode = if (jsonNode == null) {
+                readNode(file)
+            } else {
+                marge(jsonNode, readNode(file))
+            }
+        }
+        return jsonNode
+    }
+
+    @kotlin.Throws(IOException::class)
+    private open fun readNode(file: File): JsonNode? {
+        val node: JsonNode = objectMapper.readTree(file)
+        checkNode(node, file.getParent(), null, null)
+        return node
+    }
+
+    private open fun marge(one: JsonNode, two: JsonNode): JsonNode? {
+        copy(one, two, "servers")
+        copy(one, two, "paths")
+        copy(one, two, "components")
+        copy(one, two, "tags")
+        copy(one, two, "security")
+        copy(one, two, "externalDocs")
+        return one
+    }
+
+    private open fun copy(target: JsonNode, source: JsonNode, name: String) {
+        val targetNode: JsonNode = target.path(name)
+        val sourceNode: JsonNode = source.path(name)
+        if (!sourceNode.isEmpty() && targetNode.isEmpty()) {
+            (target as ObjectNode).set(name, sourceNode)
+            return
+        }
+        if (sourceNode.isArray() && targetNode.isArray()) {
+            (targetNode as ArrayNode).addAll(sourceNode as ArrayNode)
+            return
+        }
+        val iterator: Iterator<Map.Entry<String, JsonNode>> = sourceNode.fields()
+        while (iterator.hasNext()) {
+            val entry: Map.Entry<String, JsonNode> = iterator.next()
+            (targetNode as ObjectNode).set(entry.getKey(), entry.getValue())
+        }
+    }
+
+    @kotlin.Throws(IOException::class)
+    private open fun checkNode(node: JsonNode, path: String, parent: JsonNode, name: String) {
+        if (!node.isValueNode() && node.get("\$ref") == null) {
+            val iterator: Iterator<Map.Entry<String, JsonNode>> = node.fields()
+            while (iterator.hasNext()) {
+                val entry: Map.Entry<String, JsonNode> = iterator.next()
+                val jsonNode: JsonNode = entry.getValue()
+                checkNode(jsonNode, path, node, entry.getKey())
+            }
+        } else if (node.get("\$ref") != null) {
+            System.out.println(node.get("\$ref").textValue())
+            val pathFile: Path = Paths.get(path, node.get("\$ref").textValue())
+            val newNode: JsonNode = objectMapper.readTree(pathFile.toFile())
+            (newNode as ObjectNode).remove("\$schema")
+            (parent as ObjectNode).replace(name, newNode)
+            checkNode(newNode, pathFile.toFile().getParent(), node, name)
+        }
+    }
+
     @TaskAction
     fun invoke() {
         if (extension.input.isEmpty()) {

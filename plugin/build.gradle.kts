@@ -26,6 +26,10 @@ dependencies {
     // Use the Kotlin JDK 8 standard library.
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.13.0")
+
+
     // Use the Kotlin test library.
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 
@@ -36,7 +40,7 @@ dependencies {
 gradlePlugin {
     // Define the plugin
     val mergeOpenApi by plugins.creating {
-        id = "com.github.merge-openApi"
+        id = "io.github.ozonophore.merge-openApi"
         implementationClass = "com.github.mergeOpenApi.MergeOpenapiPlugin"
     }
 }
